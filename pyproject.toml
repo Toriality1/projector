@@ -1,0 +1,13 @@
+[project]
+name = "projector"
+version = "0.1.0"
+description = "A CLI tool to read file contents in a directory, with support for ignoring files and filtering extensions"
+dependencies = []
+requires-python = ">=3.6"
+
+[project.scripts]
+projector = "projector.projector:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
