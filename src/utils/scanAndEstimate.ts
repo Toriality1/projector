@@ -2,16 +2,17 @@ import fs from "fs";
 import { ProjectorOptions } from "../types";
 import getFileList from "./getFileList";
 
-function estimateTokens(text: string): number {
+async function estimateTokens(text: string): Promise<number> {
   try {
-    const { encoding_for_model } = require("tiktoken");
+    const { encoding_for_model } = await import("tiktoken");
     const encoding = encoding_for_model("gpt-4");
     const tokens = encoding.encode(text);
     const count = tokens.length;
     encoding.free();
     return count;
   } catch (error) {
-    return 0;
+    console.warn("⚠️ Token estimation disabled:", error);
+    return -1;
   }
 }
 
@@ -30,7 +31,7 @@ export async function scanAndEstimate(
     }
   }
 
-  const estimatedTokens = estimateTokens(totalContent);
+  const estimatedTokens = await estimateTokens(totalContent);
 
   return { files, estimatedTokens };
 }
