@@ -5,7 +5,6 @@ import fs from "fs";
 import path from "path";
 import chalk from "chalk";
 import {
-  PKG_NAME,
   PKG_VERSION,
   DEFAULT_IGNORE,
   LLM_TOKENS_MAX,
@@ -19,7 +18,7 @@ import { scanAndEstimate } from "./utils/scanAndEstimate";
 
 export async function run() {
   program
-    .name(`${PKG_NAME}`)
+    .name("projector")
     .version(`v${PKG_VERSION}`, "-v, --version", "Show installed version")
     .argument("[directory]", "The root directory to scan")
     .option(
