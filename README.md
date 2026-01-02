@@ -27,13 +27,15 @@ Projector is a "Context-as-a-Service" tool for AI-assisted development. By feedi
 You can run Projector without installing it using `npx`:
 
 ```bash
-npx projector-cli .
+npx @toriality/projector-cli
+# Or the commmand below, if available
+npx projector
 ```
 
 Or install it globally:
 
 ```bash
-npm install -g projector-cli
+npm install -g @toriality/projector-cli
 ```
 
 ## Usage
