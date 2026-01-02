@@ -1,0 +1,25 @@
+{
+  "name": "projector-cli",
+  "version": "1.0.0",
+  "description": "Concatenate file contents for AI context",
+  "main": "dist/index.js",
+  "bin": {
+    "projector": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "ts-node src/index.ts",
+    "prepublishOnly": "npm run build"
+  },
+  "dependencies": {
+    "chalk": "^4.1.2",
+    "commander": "^11.0.0",
+    "minimatch": "^9.0.3"
+  },
+  "devDependencies": {
+    "@types/minimatch": "^5.1.2",
+    "@types/node": "^20.0.0",
+    "ts-node": "^10.9.1",
+    "typescript": "^5.0.0"
+  }
+}
