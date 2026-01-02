@@ -20,7 +20,7 @@
     "ai"
   ],
   "scripts": {
-    "build": "esbuild src/index.ts --bundle --platform=node --format=cjs --target=node18 --outfile=dist/index.cjs",
+    "build": "node scripts/build.js",
     "start": "node dist/index.cjs",
     "prepublishOnly": "npm run build"
   },

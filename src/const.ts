@@ -1,3 +1,5 @@
+export const PKG_NAME = __PKG_NAME__;
+export const PKG_VERSION = __PKG_VERSION__;
 export const LLM_TOKENS_MAX = 200_000;
 export const LLM_TOKENS_HIGH = 100_000;
 export const DEFAULT_IGNORE = [

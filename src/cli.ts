@@ -4,7 +4,13 @@ import ncp from "copy-paste";
 import fs from "fs";
 import path from "path";
 import chalk from "chalk";
-import { DEFAULT_IGNORE, LLM_TOKENS_MAX, LLM_TOKENS_HIGH } from "./const";
+import {
+  PKG_NAME,
+  PKG_VERSION,
+  DEFAULT_IGNORE,
+  LLM_TOKENS_MAX,
+  LLM_TOKENS_HIGH,
+} from "./const";
 import { launchWizard } from "./wizard";
 import { getAllFileContents } from "./core";
 import { ProjectorOptions } from "./types";
@@ -13,7 +19,8 @@ import { scanAndEstimate } from "./utils/scanAndEstimate";
 
 export async function run() {
   program
-    .name("projector")
+    .name(`${PKG_NAME}`)
+    .version(`v${PKG_VERSION}`, "-v, --version", "Show installed version")
     .argument("[directory]", "The root directory to scan")
     .option(
       "-i, --ignore <patterns...>",
