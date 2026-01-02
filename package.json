@@ -1,4 +1,5 @@
 {
+  "type": "module",
   "name": "@toriality/projector-cli",
   "version": "0.0.1",
   "author": "toriality",
@@ -6,7 +7,7 @@
   "description": "Concatenate file contents for AI context",
   "main": "dist/index.js",
   "bin": {
-    "projector": "./dist/index.js"
+    "projector": "dist/index.cjs"
   },
   "files": [
     "bin",
@@ -19,19 +20,23 @@
     "ai"
   ],
   "scripts": {
-    "build": "tsc",
-    "dev": "tsc && node bin/projector",
-    "start": "ts-node src/index.ts",
+    "build": "esbuild src/index.ts --bundle --platform=node --format=cjs --target=node18 --outfile=dist/index.cjs",
+    "start": "node dist/index.cjs",
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
     "chalk": "^4.1.2",
     "commander": "^11.0.0",
+    "copy-paste": "^2.2.0",
+    "inquirer": "^8.2.7",
     "minimatch": "^9.0.3"
   },
   "devDependencies": {
+    "@types/copy-paste": "^2.1.0",
+    "@types/inquirer": "^8.2.12",
     "@types/minimatch": "^5.1.2",
     "@types/node": "^20.0.0",
+    "esbuild": "^0.27.2",
     "ts-node": "^10.9.1",
     "typescript": "^5.0.0"
   }

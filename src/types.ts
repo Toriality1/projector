@@ -4,4 +4,5 @@ export interface ProjectorOptions {
   output?: string;
   verbose?: boolean;
   dryRun?: boolean;
+  toClipboard?: boolean;
 }
