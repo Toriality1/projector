@@ -1,7 +1,7 @@
 {
   "type": "module",
   "name": "@toriality/projector-cli",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "author": "toriality",
   "license": "MIT",
   "description": "Concatenate file contents for AI context",
