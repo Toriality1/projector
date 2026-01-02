@@ -1,49 +1,34 @@
 import fs from "fs";
-import path from "path";
+import path from "path"
 import chalk from "chalk";
-import { walk } from "./utils/fileSystem";
+import getFileList from "./utils/getFileList";
 import { ProjectorOptions } from "./types";
+import { FILE_SEPARATOR } from "./const";
 
 export function getAllFileContents(
   rootDir: string,
   options: ProjectorOptions,
 ): string {
   const contents: string[] = [];
+  const files = getFileList(rootDir, options);
 
-  // 1. Get all files recursively
-  let allFiles = walk(rootDir, options.ignore);
-
-  // 2. Filter by extension
-  if (options.extensions && options.extensions.length > 0) {
-    allFiles = allFiles.filter((file) => {
-      const ext = path.extname(file).toLowerCase();
-      const formattedExts = options.extensions!.map((e) =>
-        e.startsWith(".") ? e : `.${e}`,
-      );
-      return formattedExts.includes(ext);
-    });
+  if (files.length === 0) {
+    console.log(chalk.yellow("No files found matching criteria."));
+    return "";
   }
 
-  // 3. Process files
-  for (const filePath of allFiles) {
+  // Show token estimate before processing
+  console.log(chalk.cyan(`\n📊 Processing ${files.length} file(s)...`));
+
+  for (const filePath of files) {
     const filePathNormalized = path
       .relative(rootDir, filePath)
       .split(path.sep)
       .join("/");
 
-    if (options.verbose) {
-      console.log(chalk.blue(`Processing ${filePathNormalized}`));
-    }
-
-    if (options.dryRun) {
-      // CHANGED: Just add the raw path, no fancy formatting
-      contents.push(filePathNormalized);
-      continue;
-    }
-
     try {
       const fileContent = fs.readFileSync(filePath, "utf-8");
-      contents.push(`<<${filePathNormalized}>>\n${fileContent}`);
+      contents.push(`<<${filePathNormalized}>>\n\n${fileContent}`);
     } catch (e) {
       console.error(
         chalk.yellow(
@@ -53,10 +38,5 @@ export function getAllFileContents(
     }
   }
 
-  // CHANGED: If dry-run, return a simple list. Otherwise, return the formatted block.
-  if (options.dryRun) {
-    return contents.join("\n");
-  }
-
-  return contents.join("\n\n--------------\n\n");
+  return contents.join(FILE_SEPARATOR);
 }

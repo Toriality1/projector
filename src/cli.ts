@@ -2,20 +2,33 @@ import { program } from "commander";
 import inquirer from "inquirer";
 import ncp from "copy-paste";
 import fs from "fs";
+import path from "path";
 import chalk from "chalk";
+import { DEFAULT_IGNORE, LLM_TOKENS_MAX, LLM_TOKENS_HIGH } from "./const";
+import { launchWizard } from "./wizard";
 import { getAllFileContents } from "./core";
 import { ProjectorOptions } from "./types";
+import { formatBytes } from "./utils/formatBytes";
+import { scanAndEstimate } from "./utils/scanAndEstimate";
 
 export async function run() {
   program
     .name("projector")
-    .argument("[directory]", "The root directory to scan") // Made optional for wizard
-    .option("-i, --ignore <patterns...>", "Patterns to ignore", [
-      "node_modules",
-      ".git",
-      "dist",
-    ])
-    // ... keep other options same as before
+    .argument("[directory]", "The root directory to scan")
+    .option(
+      "-i, --ignore <patterns...>",
+      "Patterns to ignore (supports wildcards)",
+      DEFAULT_IGNORE,
+    )
+    .option("-o, --output <file>", "Output file")
+    .option("-c, --clipboard", "Copy to clipboard")
+    .option("--include-hidden", "Include hidden files (dotfiles)")
+    .option("--preview", "Preview file list before processing")
+    .option("--include <pattern>", "Regex pattern for files to include")
+    .option(
+      "--dry-run",
+      "Show what would be processed without actually doing it",
+    )
     .action(async (directory, opts) => {
       let finalDir = directory;
       let finalOptions: ProjectorOptions = { ...opts };
@@ -26,22 +39,67 @@ export async function run() {
         finalDir = answers.directory;
         finalOptions = {
           ...finalOptions,
-          ignore: [...finalOptions.ignore, ...answers.extraIgnore],
-          extensions: answers.extensions,
-          output: answers.outputFile, // will be undefined if clipboard
+          ignore: [...DEFAULT_IGNORE, ...answers.extraIgnore],
+          output: answers.outputFile,
           toClipboard: answers.outputType === "clipboard",
+          includeHidden: answers.includeHidden,
+          include: answers.include,
+          dryRun: answers.dryRun,
         };
+
+        // Preview files if requested
+        if (answers.preview) {
+          const shouldContinue = await previewFiles(finalDir, finalOptions);
+          if (!shouldContinue) {
+            console.log(chalk.yellow("Operation cancelled."));
+            return;
+          }
+        }
+      } else if (opts.preview) {
+        // Preview for CLI mode
+        const shouldContinue = await previewFiles(finalDir, finalOptions);
+        if (!shouldContinue) {
+          console.log(chalk.yellow("Operation cancelled."));
+          return;
+        }
+      }
+
+      // Validate directory exists
+      if (!fs.existsSync(finalDir)) {
+        console.log(
+          chalk.red(`Error: Directory "${finalDir}" does not exist.`),
+        );
+        process.exit(1);
+      }
+
+      if (!fs.statSync(finalDir).isDirectory()) {
+        console.log(chalk.red(`Error: "${finalDir}" is not a directory.`));
+        process.exit(1);
+      }
+
+      // Dry run mode
+      if (finalOptions.dryRun) {
+        console.log(
+          chalk.cyan("\n🔍 DRY RUN MODE - No files will be processed\n"),
+        );
+        await previewFiles(finalDir, finalOptions, true);
+        console.log(
+          chalk.yellow(
+            "\n✓ Dry run complete. Use without --dry-run to process files.",
+          ),
+        );
+        return;
       }
 
       const result = getAllFileContents(finalDir, finalOptions);
 
       if (finalOptions.toClipboard) {
         ncp.copy(result, () => {
-          console.log(chalk.green("✔ Codebase copied to clipboard!"));
+          console.log(chalk.green("✔  Codebase copied to clipboard!"));
         });
       } else if (finalOptions.output) {
         fs.writeFileSync(finalOptions.output, result);
-        console.log(chalk.green(`✔ Saved to ${finalOptions.output}`));
+        console.log(chalk.green(`✔  Saved to ${finalOptions.output}`));
       } else {
         console.log(result);
       }
@@ -50,71 +108,68 @@ export async function run() {
   await program.parseAsync(process.argv);
 }
 
-async function launchWizard() {
-  return inquirer
-    .prompt([
-      {
-        type: "input",
-        name: "directory",
-        message: "Which directory should I scan?",
-        default: ".",
-      },
-      {
-        type: "list",
-        name: "projectType",
-        message: "What kind of project is this?",
-        choices: [
-          { name: "Node.js / TypeScript", value: "node" },
-          { name: "Python", value: "python" },
-          { name: "React / Next.js", value: "react" },
-          { name: "Plain Text / Docs", value: "docs" },
-        ],
-      },
-      {
-        type: "list",
-        name: "outputType",
-        message: "Where should I send the output?",
-        choices: [
-          { name: "📋 Copy to Clipboard", value: "clipboard" },
-          { name: "📄 Save to File", value: "file" },
-        ],
-      },
-      {
-        type: "input",
-        name: "outputFile",
-        message: "Enter output filename:",
-        default: "context.txt",
-        when: (answers) => answers.outputType === "file",
-      },
-    ])
-    .then((answers) => {
-      // Logic to map Project Type to Ignores/Extensions
-      const preset = getPreset(answers.projectType);
-      return { ...answers, ...preset };
-    });
-}
+async function previewFiles(
+  directory: string,
+  options: ProjectorOptions,
+  isDryRun: boolean = false,
+): Promise<boolean> {
+  console.log(chalk.cyan("\n📂 Scanning directory...\n"));
 
-function getPreset(type: string) {
-  const presets: Record<
-    string,
-    { extraIgnore: string[]; extensions: string[] }
-  > = {
-    node: {
-      extraIgnore: ["package-lock.json", "dist", "out"],
-      extensions: [".ts", ".js", ".json", ".md"],
+  const { files, estimatedTokens } = await scanAndEstimate(directory, options);
+
+  if (files.length === 0) {
+    console.log(chalk.yellow("No files found matching criteria."));
+    console.log(
+      chalk.dim("\nTip: Check your --include pattern and --ignore patterns."),
+    );
+    return false;
+  }
+
+  console.log(chalk.bold(`Found ${files.length} file(s):\n`));
+
+  const totalSize = files.reduce((acc, file) => {
+    return acc + fs.statSync(file).size;
+  }, 0);
+
+  files.forEach((file, index) => {
+    const relativePath = path.relative(directory, file);
+    const stats = fs.statSync(file);
+    const size = formatBytes(stats.size);
+    console.log(
+      chalk.gray(`${index + 1}.`) +
+        ` ${relativePath} ${chalk.dim(`(${size})`)}`,
+    );
+  });
+
+  console.log(chalk.cyan(`\nTotal size: ${formatBytes(totalSize)}`));
+  console.log(
+    chalk.cyan(`Estimated tokens: ${estimatedTokens.toLocaleString()}`),
+  );
+
+  if (estimatedTokens > LLM_TOKENS_MAX) {
+    console.log(
+      chalk.red(`⚠️ WARNING: Token count exceeds most LLM context windows.`),
+    );
+  } else if (estimatedTokens > LLM_TOKENS_HIGH) {
+    console.log(
+      chalk.yellow(
+        `⚠️ NOTE: Token count is high. Some LLMs may have smaller limits.`,
+      ),
+    );
+  }
+
+  if (isDryRun) {
+    return true;
+  }
+
+  const { proceed } = await inquirer.prompt([
+    {
+      type: "confirm",
+      name: "proceed",
+      message: "Proceed with these files?",
+      default: true,
     },
-    python: {
-      extraIgnore: ["__pycache__", ".venv", "*.pyc"],
-      extensions: [".py", ".md", ".txt"],
-    },
-    react: {
-      extraIgnore: [".next", "build", "coverage"],
-      extensions: [".tsx", ".ts", ".jsx", ".js", ".css"],
-    },
-    docs: {
-      extraIgnore: [],
-      extensions: [".md", ".txt", ".pdf"],
-    },
-  };
-  return presets[type];
+  ]);
+
+  return proceed;
 }

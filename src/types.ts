@@ -1,8 +1,12 @@
+// ============================================================================
+// src/types.ts
+// ============================================================================
+
 export interface ProjectorOptions {
   ignore: string[];
-  extensions?: string[];
+  include?: string;
   output?: string;
-  verbose?: boolean;
   dryRun?: boolean;
   toClipboard?: boolean;
+  includeHidden?: boolean;
 }
