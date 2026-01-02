@@ -17,7 +17,6 @@ export function getAllFileContents(
   if (options.extensions && options.extensions.length > 0) {
     allFiles = allFiles.filter((file) => {
       const ext = path.extname(file).toLowerCase();
-      // Ensure extension comparison handles dots correctly
       const formattedExts = options.extensions!.map((e) =>
         e.startsWith(".") ? e : `.${e}`,
       );
@@ -37,7 +36,8 @@ export function getAllFileContents(
     }
 
     if (options.dryRun) {
-      contents.push(`<<${filePathNormalized}>> (would be processed)`);
+      // CHANGED: Just add the raw path, no fancy formatting
+      contents.push(filePathNormalized);
       continue;
     }
 
@@ -51,6 +51,11 @@ export function getAllFileContents(
         ),
       );
     }
+  }
+
+  // CHANGED: If dry-run, return a simple list. Otherwise, return the formatted block.
+  if (options.dryRun) {
+    return contents.join("\n");
   }
 
   return contents.join("\n\n--------------\n\n");
