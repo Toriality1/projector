@@ -1,17 +1,26 @@
 {
   "name": "@toriality/projector-cli",
   "version": "0.0.1",
+  "author": "toriality",
+  "license": "MIT",
   "description": "Concatenate file contents for AI context",
   "main": "dist/index.js",
   "bin": {
-    "projector": "dist/index.js"
+    "projector": "./dist/index.js"
   },
   "files": [
+    "bin",
     "dist",
     "README.md"
   ],
+  "keywords": [
+    "cli",
+    "files",
+    "ai"
+  ],
   "scripts": {
     "build": "tsc",
+    "dev": "tsc && node bin/projector",
     "start": "ts-node src/index.ts",
     "prepublishOnly": "npm run build"
   },
